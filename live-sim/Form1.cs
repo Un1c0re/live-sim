@@ -16,12 +16,9 @@ namespace live_sim
 
         private Graphics graphics;
         private int resolution;
+        private GameEngine engine;
         
-        private bool[,] field;
-        private int currentGeneration = 0;
 
-        private int rows;
-        private int cols;
 
         public Form1()
         {
@@ -33,32 +30,22 @@ namespace live_sim
             if (timer1.Enabled)
                 return;
 
-            currentGeneration = 0;
-            Text = $"Generation {currentGeneration}";
-
             nudResolution.Enabled = false;
             nudDensity.Enabled = false;
-
             resolution = (int)nudResolution.Value;
+
+            engine = new GameEngine
+            (
+                rows: pictureBox1.Height / resolution,
+                cols: pictureBox1.Width / resolution,
+                density: (int)nudDensity.Minimum + (int)nudDensity.Maximum - (int)nudDensity.Value
+            );
+
+            Text = $"Generation {engine.CurrentGeneration}";
+
             pictureBox1.Image = new Bitmap(pictureBox1.Width, pictureBox1.Height);
             graphics = Graphics.FromImage(pictureBox1.Image);
 
-
-            rows = pictureBox1.Height / resolution;
-            cols = pictureBox1.Width / resolution;
-
-            field = new bool[cols, rows];
-
-            Random random = new Random();
-            for (int x = 0; x < cols; x++)
-            {
-                for(int y = 0; y < rows; y++)
-                {
-                    field[x, y] = random.Next((int)nudDensity.Value) == 0;
-                }
-            }
-
-            
             timer1.Start();
         }
 
@@ -73,61 +60,33 @@ namespace live_sim
             nudDensity.Enabled = true;
         }
 
-        private int CountNeighbours(int x, int y)
-        {
-            int count = 0;
-
-            for(int i = -1; i < 2; i ++)
-            {
-                for(int j = -1; j < 2; j ++)
-                {
-                    var col = (x + i + cols) % cols;
-                    var row = (y + j + rows) % rows;
-                    
-                    var isSelfChecking = col == x && row == y;
-                    var hasLife = field[col, row];
-
-                    if (hasLife && !isSelfChecking)
-                        count++;
-                }
-            }
-
-            return count;
-        }
-
-        private void NextGeneration()
+        private void DrawNextGeneration()
         {
             graphics.Clear(Color.Black);
 
-            var newField = new bool[cols, rows];
+            var field = engine.GetCurrentGeneration();
 
-            for(int x = 0; x < cols; x++)
+            for(int x  = 0; x < field.GetLength(0); x++)
             {
-                for (int y = 0; y < rows; y++)
+                for(int y = 0; y < field.GetLength(1); y++)
                 {
-                    var neighboursCount = CountNeighbours(x, y);
-                    var hasLife = field[x, y];
-
-                    if (!hasLife && neighboursCount == 3)
-                        newField[x,y] = true;
-                    else if(hasLife && (neighboursCount < 2 || neighboursCount > 3))
-                        newField[x, y] = false;
-                    else
-                        newField[x,y] = field[x, y];
-
-                    if (hasLife)
+                    if (field[x, y])
+                    {
                         graphics.FillRectangle(Brushes.Aquamarine, x * resolution, y * resolution, resolution, resolution);
+                    }
                 }
             }
-            field = newField;
-            Text = $"Generation {++currentGeneration}";
 
             pictureBox1.Refresh();
+
+            Text = $"Generation {engine.CurrentGeneration}";
+
+            engine.NextGeneration();
         }
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            NextGeneration();
+            DrawNextGeneration();
         }
 
         private void bStart_Click(object sender, EventArgs e)
@@ -145,30 +104,20 @@ namespace live_sim
             if (!timer1.Enabled)
                 return;
 
-            if(e.Button == MouseButtons.Left)
+            if (e.Button == MouseButtons.Left)
             {
                 var x = e.Location.X / resolution;
                 var y = e.Location.Y / resolution;
-
-                var vaildatePassed = ValidateMousePosition(x, y);
-                if (vaildatePassed)
-                    field[x, y] = true;
+                engine.AddCell(x, y);
             }
 
-            if(e.Button == MouseButtons.Right) 
-            { 
+            if (e.Button == MouseButtons.Right)
+            {
                 var x = e.Location.X / resolution;
                 var y = e.Location.Y / resolution;
-
-                var vaildatePassed = ValidateMousePosition(x, y);
-                if (vaildatePassed)
-                    field[x, y] = false;
+                engine.RemoveCell(x, y);
             }
         }
 
-        private bool ValidateMousePosition(int x, int y)
-        {
-            return x >= 0 && y >= 0 && x < cols && y < rows;
-        }
     }
 }
