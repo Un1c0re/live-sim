@@ -8,7 +8,6 @@ namespace live_sim
 {
     public partial class Form1 : Form
     {
-
         private Graphics graphics;
         private int resolution;
         private Color selectedColor;
@@ -27,9 +26,9 @@ namespace live_sim
             if (timer1.Enabled)
                 return;
 
-            nudResolution.Enabled = false;
-            nudDensity.Enabled = false;
-            RuleInput.Enabled = false;
+            nudResolution.Enabled   = false;
+            nudDensity.Enabled      = false;
+            RuleInput.Enabled       = false;
             resolution = (int)nudResolution.Value;
 
             engine = new GameEngine
@@ -55,26 +54,40 @@ namespace live_sim
 
             timer1.Stop();
 
-            nudResolution.Enabled = true;
-            nudDensity.Enabled = true;
-            RuleInput.Enabled = true;
+            nudResolution.Enabled   = true;
+            nudDensity.Enabled      = true;
+            RuleInput.Enabled       = true;
         }
 
         private void DrawNextGeneration()
         {
             graphics.Clear(Color.Black);
 
-            var field = engine.GetCurrentGeneration();
+            GameEngine.Cell[,] field = engine.GetCurrentGeneration();
 
             for (int x = 0; x < field.GetLength(0); x++)
             {
                 for (int y = 0; y < field.GetLength(1); y++)
                 {
-                    if (field[x, y])
+                    if (field[x, y] != null)
                     {
-                        using (SolidBrush brush = new SolidBrush(selectedColor))
+                        GameEngine.Cell cell = field[x, y];
+
+                        if (cell.State != GameEngine.CellState.Dead)
                         {
-                            graphics.FillRectangle(brush, x * resolution, y * resolution, resolution, resolution);
+
+                            int brightness = 255;
+                            if(cell.MaxLifeTime != 0)
+                            {
+                                brightness = 255 - (int)(255 * (int)cell.LifeTime / (int)cell.MaxLifeTime);
+                            }
+
+                            Color cellColor = Color.FromArgb(brightness, selectedColor);
+
+                            using (SolidBrush brush = new SolidBrush(cellColor))
+                            {
+                                graphics.FillRectangle(brush, x * resolution, y * resolution, resolution, resolution);
+                            }
                         }
                     }
                 }
@@ -101,7 +114,7 @@ namespace live_sim
             }
             else
             {
-                MessageBox.Show("Invalid rule format. Please enter in B****/S**** format.");
+                MessageBox.Show("Invalid rule format. Please enter in B**********/S**********/********** format.");
             }
         }
 
@@ -137,7 +150,7 @@ namespace live_sim
 
         private bool ValidateRule(string rule)
         {
-            string pattern = @"^B\d{1,10}/S\d{0,10}$";
+            string pattern = @"^B\d{0,9}/S\d{0,9}/\d{0,10}$";
             return Regex.IsMatch(rule, pattern);
         }
 
@@ -151,7 +164,7 @@ namespace live_sim
 
         private void trackBarSpeed_Scroll(object sender, EventArgs e)
         {
-            timer1.Interval = maxInterval/trackBar1.Value;
+            timer1.Interval = maxInterval / trackBar1.Value;
         }
     }
 }
