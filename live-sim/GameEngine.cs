@@ -1,11 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace live_sim
 {
@@ -17,11 +10,15 @@ namespace live_sim
         private readonly int rows;
         private readonly int cols;
 
-        public GameEngine(int rows, int cols,  int density)
+        private string birthRule;
+        private string survivalRule;
+
+        public GameEngine(int rows, int cols, int density, string rules)
         {
             this.rows = rows;
             this.cols = cols;
             field = new bool[cols, rows];
+            ParseRules(rules);
 
             Random random = new Random();
 
@@ -32,6 +29,13 @@ namespace live_sim
                     field[x, y] = random.Next(density) == 0;
                 }
             }
+        }
+
+        private void ParseRules(string rules)
+        {
+            var parts = rules.Split('/');
+            birthRule = parts[0].Substring(1);
+            survivalRule = parts[1].Substring(1);
         }
 
         private int CountNeighbours(int x, int y)
@@ -67,9 +71,9 @@ namespace live_sim
                     var neighboursCount = CountNeighbours(x, y);
                     var hasLife = field[x, y];
 
-                    if (!hasLife && neighboursCount == 3)
+                    if (!hasLife && birthRule.Contains(neighboursCount.ToString()))
                         newField[x, y] = true;
-                    else if (hasLife && (neighboursCount < 2 || neighboursCount > 3))
+                    else if (hasLife && !survivalRule.Contains(neighboursCount.ToString()))
                         newField[x, y] = false;
                     else
                         newField[x, y] = field[x, y];
@@ -84,9 +88,9 @@ namespace live_sim
 
             var result = new bool[cols, rows];
 
-            for(int x = 0; x < cols; x++)
-                for(int y = 0; y < rows; y++)
-                    result[x,y] = field[x,y];
+            for (int x = 0; x < cols; x++)
+                for (int y = 0; y < rows; y++)
+                    result[x, y] = field[x, y];
 
             return result;
         }
@@ -98,7 +102,7 @@ namespace live_sim
 
         private void UpdateCell(int x, int y, bool state)
         {
-            if(ValidateCellPosition(x, y))
+            if (ValidateCellPosition(x, y))
                 field[x, y] = state;
         }
 
